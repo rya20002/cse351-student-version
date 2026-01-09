@@ -28,7 +28,7 @@ from cse351 import *
 prime_count = 0
 numbers_processed = 0
 
-def is_prime(n):
+def is_prime(n: int):
     """
         Primality test using 6k+-1 optimization.
         From: https://en.wikipedia.org/wiki/Primality_test
@@ -44,23 +44,49 @@ def is_prime(n):
         i += 6
     return True
 
+def process_range(start, end, lock_prime, lock_processed):
+    global prime_count
+    global numbers_processed
+    for i in range(start, end):
+        if is_prime(i):
+            with lock_prime:
+                prime_count += 1
+            print(i, end=', ', flush=True)
+        
+        with lock_processed:
+            numbers_processed += 1
 
 def main():
-    global prime_count                  # Required in order to use a global variable
-    global numbers_processed            # Required in order to use a global variable
-
     log = Log(show_terminal=True)
     log.start_timer()
 
     start = 10000000000
-    range_count = 100000
+
+    range_count = random.randint(100000, 110000)
+    number_threads = random.randint(2,10)
+    
     numbers_processed = 0
-    for i in range(start, start + range_count):
-        numbers_processed += 1
-        if is_prime(i):
-            prime_count += 1
-            print(i, end=', ', flush=True)
-    print(flush=True)
+    prime_count = 0
+
+    log.start_timer()
+
+    lock_prime = threading.Lock()
+    lock_processed = threading.Lock()
+
+    threads = []
+
+
+    for i in range(number_threads):
+        t = threading.Thread(target=process_range, args=(start, start + range_count, i, number_threads, lock_prime, lock_processed))
+        threads.append(t)
+    
+    for t in threads:
+        t.start()
+
+    for t in threads:
+        t.join()
+
+
 
     # Should find 4306 primes
     log.write(f'Numbers processed = {numbers_processed}')
